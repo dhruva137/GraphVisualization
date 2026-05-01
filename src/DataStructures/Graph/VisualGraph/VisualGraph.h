@@ -1,9 +1,7 @@
 #include <cmath>
+
 #include "VisualGraphNode.h"
 #include "VisualGraphEdge.h"
-
-#include <windows.h>
-#include <pthread.h>
 
 class VisualGraph : public Graph<VisualGraphNode, VisualGraphEdge>
 {
@@ -18,12 +16,22 @@ class VisualGraph : public Graph<VisualGraphNode, VisualGraphEdge>
 
         void VisualizeCyclicEdges();
 
+        void UpdateVisualization(float deltaSeconds);
+        void SetRevealIntervalSeconds(float seconds);
+        float GetRevealIntervalSeconds() const;
+        const std::string& GetCurrentModeLabel() const;
+
         LinkedList<VisualGraphEdge> * VisualizedEdges;
 
     private:
         Color * _visualColorPalette;
+        LinkedList<VisualGraphEdge *> _pendingEdges;
+        float _revealTimerSeconds = 0.0f;
+        float _revealIntervalSeconds = 0.08f;
+        std::string _currentModeLabel = "DFS";
 
         void InitColorPalette();
+        void QueueVisualization(LinkedList<VisualGraphEdge *> edges, Color color, const std::string& modeLabel);
 };
 
 VisualGraph::VisualGraph(int nodeCount, int windowWidth, int windowHeight)
@@ -68,87 +76,81 @@ VisualGraph::VisualGraph(int nodeCount, int windowWidth, int windowHeight)
                                             Constants::GET_EDGE_COLOR());
 
                 _adjLinkList[i].PushBack(edge);
-
-                cout << i << " --> " << j << "\n";
             }
         }
     }
 }
 
-void VisualGraph::VisualDFS()
+void VisualGraph::SetRevealIntervalSeconds(float seconds)
+{
+    if (seconds < 0.01f)
+    {
+        _revealIntervalSeconds = 0.01f;
+        return;
+    }
+
+    if (seconds > 0.5f)
+    {
+        _revealIntervalSeconds = 0.5f;
+        return;
+    }
+
+    _revealIntervalSeconds = seconds;
+}
+
+float VisualGraph::GetRevealIntervalSeconds() const
+{
+    return _revealIntervalSeconds;
+}
+
+const std::string& VisualGraph::GetCurrentModeLabel() const
+{
+    return _currentModeLabel;
+}
+
+void VisualGraph::QueueVisualization(LinkedList<VisualGraphEdge *> edges, Color color, const std::string& modeLabel)
 {
     VisualizedEdges->Clear();
+    _pendingEdges.Clear();
+    _revealTimerSeconds = 0.0f;
+    _currentModeLabel = modeLabel;
 
-    Sleep(500);
-
-    LinkedList<VisualGraphEdge *> traversalOrder = DFS();
-
-    for (int i = 0; i < traversalOrder.Size(); i++)
+    for (int i = 0; i < edges.Size(); i++)
     {
-        traversalOrder.ValueAt(i)->SetColor(Color::Red);
-
-        cout << "Source Node : " << traversalOrder.ValueAt(i)->GetSourceNode()->GetIndex() << " -> " <<
-        "Target Node : " << traversalOrder.ValueAt(i)->GetTargetNode()->GetIndex() << "\n";
-
-        VisualizedEdges->PushBack(*(traversalOrder.ValueAt(i)));
-
-        Sleep(500);
+        edges.ValueAt(i)->SetColor(color);
+        _pendingEdges.PushBack(edges.ValueAt(i));
     }
+}
+
+void VisualGraph::UpdateVisualization(float deltaSeconds)
+{
+    _revealTimerSeconds += deltaSeconds;
+
+    while (_revealTimerSeconds >= _revealIntervalSeconds && !_pendingEdges.IsEmpty())
+    {
+        VisualizedEdges->PushBack(*(_pendingEdges.PopFront()));
+        _revealTimerSeconds -= _revealIntervalSeconds;
+    }
+}
+
+void VisualGraph::VisualDFS()
+{
+    QueueVisualization(DFS(), Color::Red, "DFS");
 }
 
 void VisualGraph::VisualBFS()
 {
-    VisualizedEdges->Clear();
-
-    Sleep(500);
-
-    LinkedList<VisualGraphEdge *> traversalOrder = BFS();
-
-    for (int i = 0; i < traversalOrder.Size(); i++)
-    {
-        traversalOrder.ValueAt(i)->SetColor(Color::Red);
-
-        cout << "Source Node : " << traversalOrder.ValueAt(i)->GetSourceNode()->GetIndex() << " ->" <<
-         "Target Node : " << traversalOrder.ValueAt(i)->GetTargetNode()->GetIndex() << "\n";
-
-        VisualizedEdges->PushBack(*(traversalOrder.ValueAt(i)));
-
-        Sleep(500);
-    }
+    QueueVisualization(BFS(), Color::Green, "BFS");
 }
 
 void VisualGraph::VisualShortestPath(int source, int target)
 {
-    LinkedList<VisualGraphEdge *> path = ShortestPath(source, target);
-
-    VisualizedEdges->Clear();
-
-    Sleep(1000);
-
-    for (int i = 0; i < path.Size(); i++)
-    {
-        path.ValueAt(i)->SetColor(Color::Red);
-
-        VisualizedEdges->PushBack(*(path.ValueAt(i)));
-
-        Sleep(1000);
-    }
+    QueueVisualization(ShortestPath(source, target), Color::Yellow, "Shortest Path");
 }
 
 void VisualGraph::VisualizeCyclicEdges()
 {
-    LinkedList<VisualGraphEdge *> cyclicEdges = DetermineCycles();
-
-    Sleep(1000);
-
-    for (int i = 0; i < cyclicEdges.Size(); i++)
-    {
-        cyclicEdges.ValueAt(i)->SetColor(Color::Red);
-
-        VisualizedEdges->PushBack(*(cyclicEdges.ValueAt(i)));
-
-        Sleep(1000);
-    }
+    QueueVisualization(DetermineCycles(), Color::Magenta, "Cycle Detection");
 }
 
 void VisualGraph::InitColorPalette()
@@ -164,5 +166,3 @@ void VisualGraph::InitColorPalette()
         _visualColorPalette[i] = Color(r, g, b, 255);
     }
 }
-
-
