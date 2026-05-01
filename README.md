@@ -1,12 +1,19 @@
-# GraphVisualization
-Visualization of basic graph algorithms such as DFS, BFS, Djikstra's Shortest Path, Cycle Detection etc. To render visuals used SFML with C++.
+# GraphVisualization v2.0.0
+Visualization of graph algorithms (DFS, BFS, Dijkstra shortest path, cycle detection, etc.) using SFML and modern C++.
 
+## Current Runtime Version
+- **Project version:** `2.0.0`
+- **CMake minimum:** `3.24`
+- **C++ standard:** `C++23`
 
-Visualization of DFS : 
+## Visualization Demo
+![DFS Demo](https://media.giphy.com/media/ctL37LSt1ySo5LFvPQ/giphy.gif)
 
+## Build
+```bash
+cmake -S . -B build -DGRAPHVIZ_BUILD_APP=ON -DGRAPHVIZ_BUILD_TESTS=ON
+cmake --build build -j
+```
 
-![Alt Text](https://media.giphy.com/media/ctL37LSt1ySo5LFvPQ/giphy.gif)
-
-
-## Contact & Some Additional Notes
-The project is done for educational purpose. If you own anything and don't want it to be in the project or if you have any questions or comments, please feel free to contact me.
+## Contact
+This project started as an educational project and is being actively modernized.
